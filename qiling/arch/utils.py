@@ -57,9 +57,9 @@ class QlArchUtils:
 
             ql.log.info(f'{insn.address:0{anibbles}x} [{name:20s} + {offset:#08x}]  {insn.bytes.hex(" "):20s} {insn.mnemonic:20s} {insn.op_str}')
 
-        if ql.verbose >= QL_VERBOSE.DUMP:
-            for reg in ql.arch.regs.register_mapping:
-                ql.log.info(f'{reg:10s} : {ql.arch.regs.read(reg):#x}')
+        #if ql.verbose >= QL_VERBOSE.DUMP:
+        #    for reg in ql.arch.regs.register_mapping:
+        #        ql.log.info(f'{reg:10s} : {ql.arch.regs.read(reg):#x}')
 
     def setup_output(self, verbosity: QL_VERBOSE):
         def ql_hook_block_disasm(ql: Qiling, address: int, size: int):
