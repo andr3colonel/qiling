@@ -30,29 +30,29 @@ from qiling.os.linux.kernel_api.kernel_api import hook_sys_open, hook_sys_read, 
 # auxiliary vector types
 # see: https://man7.org/linux/man-pages/man3/getauxval.3.html
 class AUXV(IntEnum):
-    AT_NULL     = 0
-    AT_IGNORE   = 1
-    AT_EXECFD   = 2
-    AT_PHDR     = 3
-    AT_PHENT    = 4
-    AT_PHNUM    = 5
-    AT_PAGESZ   = 6
-    AT_BASE     = 7
-    AT_FLAGS    = 8
-    AT_ENTRY    = 9
-    AT_NOTELF   = 10
-    AT_UID      = 11
-    AT_EUID     = 12
-    AT_GID      = 13
-    AT_EGID     = 14
+    AT_NULL = 0
+    AT_IGNORE = 1
+    AT_EXECFD = 2
+    AT_PHDR = 3
+    AT_PHENT = 4
+    AT_PHNUM = 5
+    AT_PAGESZ = 6
+    AT_BASE = 7
+    AT_FLAGS = 8
+    AT_ENTRY = 9
+    AT_NOTELF = 10
+    AT_UID = 11
+    AT_EUID = 12
+    AT_GID = 13
+    AT_EGID = 14
     AT_PLATFORM = 15
-    AT_HWCAP    = 16
-    AT_CLKTCK   = 17
-    AT_SECURE   = 23
+    AT_HWCAP = 16
+    AT_CLKTCK = 17
+    AT_SECURE = 23
     AT_BASE_PLATFORM = 24
-    AT_RANDOM   = 25
-    AT_HWCAP2   = 26
-    AT_EXECFN   = 31
+    AT_RANDOM = 25
+    AT_HWCAP2 = 26
+    AT_EXECFN = 31
 
 
 # start area memory for API hooking
@@ -143,7 +143,8 @@ class QlLoaderELF(QlLoader):
 
         return prot
 
-    def load_with_ld(self, elffile: ELFFile, stack_addr: int, load_address: int, argv: Sequence[str] = [], env: Mapping[str, str] = {}):
+    def load_with_ld(self, elffile: ELFFile, stack_addr: int, load_address: int, argv: Sequence[str] = [],
+                     env: Mapping[str, str] = {}):
 
         def load_elf_segments(elffile: ELFFile, load_address: int, info: str):
             # get list of loadable segments; these segments will be loaded to memory
@@ -303,8 +304,8 @@ class QlLoaderELF(QlLoader):
         elf_table.extend(self.ql.pack(0))
 
         new_stack = randstraddr = __push_str(new_stack, 'a' * 16)
-        new_stack = cpustraddr  = __push_str(new_stack, 'i686')
-        new_stack = execfn      = __push_str(new_stack, argv[0])
+        new_stack = cpustraddr = __push_str(new_stack, 'i686')
+        new_stack = execfn = __push_str(new_stack, argv[0])
 
         # store aux vector data for gdb use
         elf_phdr = elffile['e_phoff'] + mem_start
@@ -400,7 +401,7 @@ class QlLoaderELF(QlLoader):
         """Get file offset of the init_module function.
         """
 
-        symbol_tables = (sec for sec in elffile.iter_sections() if type(sec) is SymbolTableSection)
+        symbol_tables = [sec for sec in elffile.iter_sections() if type(sec) is SymbolTableSection]
 
         for sec in symbol_tables:
             syms = sec.get_symbol_by_name('init_module')
@@ -410,6 +411,21 @@ class QlLoaderELF(QlLoader):
                 addr = sym['st_value'] + elffile.get_section(sym['st_shndx'])['sh_offset']
 
                 return addr
+
+        for sec in symbol_tables:
+            syms = sec.get_symbol_by_name('__this_module')
+            return 0x8000
+            """
+            if syms:
+                sym = syms[0]
+                sec_len = len(sec.data)
+                addr = sym['st_value'] + elffile.get_section(sym['st_shndx'])['sh_offset']
+                self.ql.log.debug(f"Reading from addr: {addr} to {addr + sym['st_size']}")
+                for paddr in range(addr, addr + sym['st_size']):
+                    pointer = self.ql.mem.read_ptr(paddr)
+                    self.ql.log.debug(f"{pointer:08x}")
+                return addr
+            """
 
         raise QlErrorELFFormat('invalid module: symbol init_module not found')
 
@@ -474,7 +490,8 @@ class QlLoaderELF(QlLoader):
                                 # we need to lookup from address to symbol, so we can find the right callback
                                 # for sys_xxx handler for syscall, the address must be aligned to pointer size
                                 if symbol_name.startswith('sys_'):
-                                    self.ql.os.hook_addr = self.ql.mem.align_up(self.ql.os.hook_addr, self.ql.arch.pointersize)
+                                    self.ql.os.hook_addr = self.ql.mem.align_up(self.ql.os.hook_addr,
+                                                                                self.ql.arch.pointersize)
 
                                 self.import_symbols[self.ql.os.hook_addr] = symbol_name
 
@@ -500,12 +517,12 @@ class QlLoaderELF(QlLoader):
 
                     # FIXME: using the rh.apply_section_relocations method for the following relocation work
                     # seems to be cleaner.
-
                     loc = elffile.get_section(reloc_sec['sh_info'])['sh_offset'] + rel['r_offset']
                     loc += mem_start
-
                     desc = describe_reloc_type(rel['r_info_type'], elffile)
-
+                    ql.log.info(f"Relocate {desc} {reloc_sec.name}:{rel.entry.r_offset:08x} at {loc:08x}")
+                    # 0000022c  00000104 R_MIPS_26         00000000   .text
+                    ql.log.info(f"Offset: {loc:08x} Info: {rel['r_info']:08x} Type: {desc} SymValue: {symbol.entry.st_value} SymName: {symbol_name}")
                     if desc in ('R_X86_64_32S', 'R_X86_64_32'):
                         # patch this reloc
                         if rel['r_addend']:
@@ -541,22 +558,49 @@ class QlLoaderELF(QlLoader):
                         val += rev_reloc_symbols[symbol_name]
                         ql.mem.write_ptr(loc, (val & 0xFFFFFFFF), 4)
 
+                    elif desc == 'R_MIPS_26':
+                        oldValue = ql.mem.read_ptr(loc, 4)
+                        addend = (oldValue & 0x03FFFFFF) << 2;
+                        value = (addend + rev_reloc_symbols[symbol_name]) >> 2;
+                        newValue = (oldValue & ~0x03FFFFFF) | (value & 0x03FFFFFF)
+                        ql.mem.write_ptr(loc, (newValue & 0xFFFFFFFF), 4)
+                        #ql.log.info(f"Relocate MIPS23. Symbol {symbol_name}: loc {loc:08x} val {val:08x}")
+                        #prev_mips_hi16_loc = loc
+                        val = 0
+
                     elif desc == 'R_MIPS_HI16':
                         # actual relocation is done in R_MIPS_LO16
                         prev_mips_hi16_loc = loc
+                        prev_mips_hi16_val = None
 
                     elif desc == 'R_MIPS_LO16':
-                        val = ql.mem.read_ptr(prev_mips_hi16_loc + 2, 2) << 16 | ql.mem.read_ptr(loc + 2, 2)
-                        val = rev_reloc_symbols[symbol_name] + val
-                        # *(word)(mips_lo16_loc + 2) is treated as signed
-                        if (val & 0xFFFF) >= 0x8000:
-                            val += (1 << 16)
+                        if self.ql.arch.endian == QL_ENDIAN.EB:
+                            val = ql.mem.read_ptr(prev_mips_hi16_loc + 2, 2) << 16 | ql.mem.read_ptr(loc + 2, 2)
+                            val = rev_reloc_symbols[symbol_name] + val
+                            # *(word)(mips_lo16_loc + 2) is treated as signed
+                            if (val & 0xFFFF) >= 0x8000:
+                                val += (1 << 16)
 
-                        ql.mem.write_ptr(prev_mips_hi16_loc + 2, (val >> 16), 2)
-                        ql.mem.write_ptr(loc + 2, (val & 0xFFFF), 2)
+                            ql.mem.write_ptr(prev_mips_hi16_loc + 2, (val >> 16), 2)
+                            ql.mem.write_ptr(loc + 2, (val & 0xFFFF), 2)
+                        elif self.ql.arch.endian == QL_ENDIAN.EL:
+                            if prev_mips_hi16_loc is not None:
+                                prev_mips_hi16_val = ql.mem.read_ptr(prev_mips_hi16_loc, 2)
+                            val = prev_mips_hi16_val << 16 | ql.mem.read_ptr(loc, 2)
+                            val = rev_reloc_symbols[symbol_name] + val
+                            # *(word)(mips_lo16_loc + 2) is treated as signed
+                            if (val & 0xFFFF) >= 0x8000:
+                                val += (1 << 16)
+
+                            if prev_mips_hi16_loc is not None:
+                                ql.mem.write_ptr(prev_mips_hi16_loc, (val >> 16), 2)
+                            ql.mem.write_ptr(loc, (val & 0xFFFF), 2)
+                        prev_mips_hi16_loc = None
 
                     else:
                         raise NotImplementedError(f'Relocation type {desc} not implemented')
+
+
 
         return rev_reloc_symbols
 
@@ -615,9 +659,12 @@ class QlLoaderELF(QlLoader):
                     self.ql.mem.write_ptr(dest, addr)
 
         # write syscall addresses into syscall table
-        self.ql.mem.write_ptr(SYSCALL_MEM + 0 * self.ql.arch.pointersize, self.ql.os.hook_addr + 0 * self.ql.arch.pointersize)
-        self.ql.mem.write_ptr(SYSCALL_MEM + 1 * self.ql.arch.pointersize, self.ql.os.hook_addr + 1 * self.ql.arch.pointersize)
-        self.ql.mem.write_ptr(SYSCALL_MEM + 2 * self.ql.arch.pointersize, self.ql.os.hook_addr + 2 * self.ql.arch.pointersize)
+        self.ql.mem.write_ptr(SYSCALL_MEM + 0 * self.ql.arch.pointersize,
+                              self.ql.os.hook_addr + 0 * self.ql.arch.pointersize)
+        self.ql.mem.write_ptr(SYSCALL_MEM + 1 * self.ql.arch.pointersize,
+                              self.ql.os.hook_addr + 1 * self.ql.arch.pointersize)
+        self.ql.mem.write_ptr(SYSCALL_MEM + 2 * self.ql.arch.pointersize,
+                              self.ql.os.hook_addr + 2 * self.ql.arch.pointersize)
 
         # setup hooks for read/write/open syscalls
         self.import_symbols[self.ql.os.hook_addr + 0 * self.ql.arch.pointersize] = hook_sys_read
@@ -625,20 +672,20 @@ class QlLoaderELF(QlLoader):
         self.import_symbols[self.ql.os.hook_addr + 2 * self.ql.arch.pointersize] = hook_sys_open
 
     def get_elfdata_mapping(self, elffile: ELFFile) -> bytes:
-        # from io import BytesIO
-        #
-        # rh = RelocationHandler(elffile)
-        #
-        # for sec in elffile.iter_sections():
-        #     rs = rh.find_relocations_for_section(sec)
-        #
-        #     if rs is not None:
-        #         ss = BytesIO(sec.data())
-        #         rh.apply_section_relocations(ss, rs)
-        #
-        #         # apply changes to stream
-        #         elffile.stream.seek(sec['sh_offset'])
-        #         elffile.stream.write(ss.getbuffer())
+        #from io import BytesIO
+
+        #rh = RelocationHandler(elffile)
+
+        #for sec in elffile.iter_sections():
+        #    rs = rh.find_relocations_for_section(sec)
+
+         #   if rs is not None:
+         #       ss = BytesIO(sec.data())
+         #       rh.apply_section_relocations(ss, rs)
+
+                # apply changes to stream
+         #       elffile.stream.seek(sec['sh_offset'])
+         #       elffile.stream.write(ss.getbuffer())
         #
         # TODO: need to patch hooked symbols with their hook targets
         # (e.g. replace calls to 'printk' with the hooked address that
