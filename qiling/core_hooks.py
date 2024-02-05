@@ -20,32 +20,32 @@ from unicorn.unicorn_const import (
     UC_HOOK_CODE,
     UC_HOOK_BLOCK,
 
-    UC_HOOK_MEM_READ_UNMAPPED,      # attempt to read from an unmapped memory location
-    UC_HOOK_MEM_WRITE_UNMAPPED,     # attempt to write to an unmapped memory location
-    UC_HOOK_MEM_FETCH_UNMAPPED,     # attempt to fetch from an unmapped memory location
-    UC_HOOK_MEM_UNMAPPED,           # any of the 3 above
+    UC_HOOK_MEM_READ_UNMAPPED,  # attempt to read from an unmapped memory location
+    UC_HOOK_MEM_WRITE_UNMAPPED,  # attempt to write to an unmapped memory location
+    UC_HOOK_MEM_FETCH_UNMAPPED,  # attempt to fetch from an unmapped memory location
+    UC_HOOK_MEM_UNMAPPED,  # any of the 3 above
 
-    UC_HOOK_MEM_READ_PROT,          # attempt to read from a non-readable memory location
-    UC_HOOK_MEM_WRITE_PROT,         # attempt to write to a write-protected memory location
-    UC_HOOK_MEM_FETCH_PROT,         # attempt to fetch from a non-executable memory location
-    UC_HOOK_MEM_PROT,               # any of the 3 above
+    UC_HOOK_MEM_READ_PROT,  # attempt to read from a non-readable memory location
+    UC_HOOK_MEM_WRITE_PROT,  # attempt to write to a write-protected memory location
+    UC_HOOK_MEM_FETCH_PROT,  # attempt to fetch from a non-executable memory location
+    UC_HOOK_MEM_PROT,  # any of the 3 above
 
-    UC_HOOK_MEM_READ_INVALID,       # UC_HOOK_MEM_READ_UNMAPPED | UC_HOOK_MEM_READ_PROT
-    UC_HOOK_MEM_WRITE_INVALID,      # UC_HOOK_MEM_WRITE_UNMAPPED | UC_HOOK_MEM_WRITE_INVALID
-    UC_HOOK_MEM_FETCH_INVALID,      # UC_HOOK_MEM_FETCH_UNMAPPED | UC_HOOK_MEM_FETCH_INVALID
-    UC_HOOK_MEM_INVALID,            # any of the 3 above
+    UC_HOOK_MEM_READ_INVALID,  # UC_HOOK_MEM_READ_UNMAPPED | UC_HOOK_MEM_READ_PROT
+    UC_HOOK_MEM_WRITE_INVALID,  # UC_HOOK_MEM_WRITE_UNMAPPED | UC_HOOK_MEM_WRITE_INVALID
+    UC_HOOK_MEM_FETCH_INVALID,  # UC_HOOK_MEM_FETCH_UNMAPPED | UC_HOOK_MEM_FETCH_INVALID
+    UC_HOOK_MEM_INVALID,  # any of the 3 above
 
-    UC_HOOK_MEM_READ,               # valid memory read
-    UC_HOOK_MEM_WRITE,              # valid memory write
-    UC_HOOK_MEM_FETCH,              # valid instruction fetch
-    UC_HOOK_MEM_VALID,              # any of the 3 above
+    UC_HOOK_MEM_READ,  # valid memory read
+    UC_HOOK_MEM_WRITE,  # valid memory write
+    UC_HOOK_MEM_FETCH,  # valid instruction fetch
+    UC_HOOK_MEM_VALID,  # any of the 3 above
 
     UC_HOOK_MEM_READ_AFTER,
     UC_HOOK_INSN_INVALID
 )
 
-from .core_hooks_types import Hook, HookAddr, HookIntr, HookRet
 from .const import QL_HOOK_BLOCK
+from .core_hooks_types import Hook, HookAddr, HookIntr, HookRet
 from .exception import QlErrorCoreHook
 
 if TYPE_CHECKING:
@@ -203,6 +203,9 @@ class QlCoreHooks:
         """
 
         ql, hook_type = pack_data
+        for insn in ql.arch.disassembler.disasm(ql.mem.read(addr, 4), addr):
+            ql.log.debug(
+                f'{insn.address:08x} {insn.bytes.hex(" "):20s} {insn.mnemonic:20s} {insn.op_str}')
 
         if hook_type in self._hook:
             hooks_list = self._hook[hook_type]
