@@ -458,6 +458,31 @@ def hook_sys_read(ql, address, params):
 def hook_sys_write(ql, address, params):
     return 0
 
+
+@linux_kernel_api(params={
+    "addr": POINTER
+})
+def hook_in_aton(ql, address, params):
+    ql.log.debug(f"Hooking in_aton at {address:08x}")
+    return 0
+
+@linux_kernel_api(params={
+    "reg": POINTER,
+    "n": UINT
+})
+def hook_nf_register_hook(ql, address, params):
+    ql.log.debug(f"Hooking nf_register_hook at {address:08x}")
+    return 0
+
+
+@linux_kernel_api(params={
+    "str": POINTER,
+    "chr": UINT
+})
+def hook_strchr(ql, address, params):
+    ql.log.debug(f"Hooking strchr at {address:08x}")
+    return 0
+
 @linux_kernel_api(params={
     "pathname": STRING,
     "flags": UINT,
