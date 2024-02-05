@@ -339,8 +339,9 @@ class QlMemoryManager:
 
         if __unpack is None:
             raise QlErrorStructConversion(f"Unsupported pointer size: {size}")
-
-        return __unpack(self.read(addr, size))
+        res = __unpack(self.read(addr, size))
+        self.ql.log.debug(f"Reading pointer {res:08x} from {addr:08x}")
+        return res
 
     def write(self, addr: int, data: bytes) -> None:
         """Write bytes to a memory.
@@ -374,7 +375,7 @@ class QlMemoryManager:
 
         if __pack is None:
             raise QlErrorStructConversion(f"Unsupported pointer size: {size}")
-
+        self.ql.log.debug(f"Writing pointer {value:08x} to {addr:08x}")
         self.write(addr, __pack(value))
 
     def search(self, needle: Union[bytes, Pattern[bytes]], begin: Optional[int] = None, end: Optional[int] = None) -> Sequence[int]:
