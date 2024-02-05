@@ -4,7 +4,7 @@
 #
 
 from __future__ import annotations
-
+import sys
 import copy
 import logging
 import os
@@ -152,7 +152,7 @@ def __is_color_terminal(stream: TextIO) -> bool:
 
     handler = handlers.get(os.name, __default)
 
-    return handler(stream.fileno())
+    return handler(1)
 
 
 def setup_logger(ql: Qiling, log_file: Optional[str], console: bool, log_override: Optional[Logger], log_plain: bool):

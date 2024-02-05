@@ -21,6 +21,27 @@ from .utils import QlOsUtils
 from .path import QlOsPath
 
 
+class StreamWrapper:
+    def __init__(self, steam):
+        self.steam = steam
+
+    def close(self):
+        return self.steam.close()
+
+    @property
+    def name(self):
+        return 'stdout'
+
+    def write(self, buff):
+        if isinstance(buff, bytes):
+            buff = buff.decode('latin1')
+        if isinstance(buff, bytearray):
+            buff = buff.decode('latin1')
+        self.steam.write(buff)
+
+    def flush(self, *args, **kwargs):
+        return self.steam.flush(*args, **kwargs)
+
 class QlOs:
     type: QL_OS
 
@@ -61,12 +82,14 @@ class QlOs:
             # such as fileno(). here we use this to determine how we are going to use
             # the environment standard streams
             sys.stdin.fileno()
+            sys.stdout.fileno()
+            sys.stderr.fileno()
         except UnsupportedOperation:
             # Qiling is used on an interactive shell or embedded python interpreter.
             # if the internal stream buffer is accessible, we should use it
             self._stdin  = getattr(sys.stdin,  'buffer', sys.stdin)
-            self._stdout = getattr(sys.stdout, 'buffer', sys.stdout)
-            self._stderr = getattr(sys.stderr, 'buffer', sys.stderr)
+            self._stdout = getattr(sys.stdout, 'buffer', StreamWrapper(sys.stdout))
+            self._stderr = getattr(sys.stderr, 'buffer', StreamWrapper(sys.stderr))
         else:
             # Qiling is used in a script, or on an environment that supports ordinary
             # stanard streams
