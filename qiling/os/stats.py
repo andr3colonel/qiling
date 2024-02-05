@@ -32,13 +32,24 @@ class QlOsStats:
         return ['', caption, bar]
 
     def summary(self) -> List[str]:
+        def serialize(data):
+            _data = {}
+            for k, v in data.items():
+                if isinstance(v, int):
+                    _data[k] = hex(v)
+                elif isinstance(v, dict):
+                    _data[k] = serialize(v)
+                else:
+                    _data[k] = v
+            return _data
+
         ret = []
 
         ret.extend(QlOsStats._banner('syscalls called'))
 
         for key, values in self.syscalls.items():
             ret.append(f'{key}:')
-            ret.extend(f'  {json.dumps(value):s}' for value in values)
+            ret.extend(f'  {json.dumps(serialize(value)):s}' for value in values)
 
         ret.extend(QlOsStats._banner('strings ocurrences'))
 
