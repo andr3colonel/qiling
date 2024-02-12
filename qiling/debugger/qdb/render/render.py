@@ -213,9 +213,12 @@ class ContextRender(Context, Render):
 
         cur_addr = from_addr
         while cur_addr <= to_addr:
-            insn = self.disasm(cur_addr)
-            cur_addr += insn.size
-            past_list.append(insn)
+            try:
+                insn = self.disasm(cur_addr)
+                cur_addr += insn.size
+                past_list.append(insn)
+            except:
+                pass
 
         bk_list = []
         fd_list = []
