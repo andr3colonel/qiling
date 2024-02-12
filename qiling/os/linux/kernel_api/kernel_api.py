@@ -324,8 +324,47 @@ def hook_memcmp(ql, address, params):
     s1 = params['s1']
     s2 = params['s2']
     size = params['size']
-    return ql.mem.read(s1, size) ==  ql.mem.read(s2, size)
+    for i in range(size):
+        ch1 = ql.mem.read(s1+i, 1)[0]
+        ch2 = ql.mem.read(s2+i, 1)[0]
+        if ch1 == ch2:
+            continue
+        if ch1 > ch2:
+            return 1
+        if ch1 < ch2:
+            return -1
+    return 0
 
+
+@linux_kernel_api(params={
+    "net": POINTER,
+    "name": POINTER
+})
+def hook_dev_get_by_name(ql, address, params):
+    return 0x6000000
+
+@linux_kernel_api(params={
+    "net": POINTER,
+    "flp": POINTER,
+    "sock": POINTER
+})
+def hook_ip_route_output_flow(ql, address, params):
+    return 0x5000000
+
+@linux_kernel_api(params={
+    "cpu": int
+})
+def hook___per_cpu_offset(ql, address, params):
+    return 0x8
+
+@linux_kernel_api(params={
+    "size": int,
+    "priority": int,
+    "flags": int,
+    "node": int
+})
+def hook___alloc_skb(ql, address, params):
+    return 0x4000000
 
 @linux_kernel_api(params={
     "str1": POINTER,
@@ -335,6 +374,39 @@ def hook_memcmp(ql, address, params):
 def hook_simple_strtol(ql, address, params):
     return 0
 
+@linux_kernel_api(params={
+    "skb": POINTER,
+    "size": INT
+})
+def hook_skb_put(ql, address, params):
+    return 0
+
+@linux_kernel_api(params={
+    "net": POINTER,
+    "iphdr": POINTER,
+    "segs": INT
+})
+def hook___ip_select_ident(ql, address, params):
+    return 0
+
+@linux_kernel_api(params={
+    "nfct": POINTER
+})
+def hook_nf_conntrack_destroy(ql, address, params):
+    return 0
+
+@linux_kernel_api(params={
+    "dst": POINTER
+})
+def hook_dst_release(ql, address, params):
+    return 0
+
+@linux_kernel_api(params={
+    "skb1": POINTER,
+    "skb2": POINTER
+})
+def hook_nf_ct_attach(ql, address, params):
+    return 0
 
 @linux_kernel_api(params={
 })
@@ -431,16 +503,19 @@ def hook_hook_unregister_module_notifier(ql, address, params):
 def hook_hook_kobject_del(ql, address, params):
     return 0
 
+
 @linux_kernel_api(params={
 })
 def hook_proc_create(ql, address, params):
     # indicate that proc_create successed, and return (proc_dir_entry *)
     return 0x1000
 
+
 @linux_kernel_api(params={
 })
 def hook_remove_proc_entry(ql, address, params):
     return 0
+
 
 @linux_kernel_api(params={
     "fd": UINT,
@@ -449,6 +524,7 @@ def hook_remove_proc_entry(ql, address, params):
 })
 def hook_sys_read(ql, address, params):
     return 0
+
 
 @linux_kernel_api(params={
     "fd": UINT,
@@ -465,6 +541,7 @@ def hook_sys_write(ql, address, params):
 def hook_in_aton(ql, address, params):
     ql.log.debug(f"Hooking in_aton at {address:08x}")
     return 0
+
 
 @linux_kernel_api(params={
     "reg": POINTER,
@@ -483,6 +560,7 @@ def hook_strchr(ql, address, params):
     ql.log.debug(f"Hooking strchr at {address:08x}")
     return 0
 
+
 @linux_kernel_api(params={
     "pathname": STRING,
     "flags": UINT,
@@ -490,15 +568,18 @@ def hook_strchr(ql, address, params):
 def hook_sys_open(ql, address, params):
     return 0
 
+
 @linux_kernel_api(params={
 })
 def hook_make_kgid(ql, address, params):
     return 0
 
+
 @linux_kernel_api(params={
 })
 def hook_make_kuid(ql, address, params):
     return 0
+
 
 @linux_kernel_api(params={
 })
@@ -506,15 +587,18 @@ def hook_prepare_creds(ql, address, params):
     # return non-NULL creds
     return 0x1000
 
+
 @linux_kernel_api(params={
 })
 def hook_commit_creds(ql, address, params):
     return 0
 
+
 @linux_kernel_api(params={
 })
 def hook_abort_creds(ql, address, params):
     return 0
+
 
 @linux_kernel_api(params={
     "dest": POINTER,
