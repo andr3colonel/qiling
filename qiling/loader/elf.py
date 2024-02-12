@@ -620,6 +620,7 @@ class QlLoaderELF(QlLoader):
 
         self.ql.mem.map(loadbase + mem_start, mem_end - mem_start, info=self.ql.path)
         self.ql.mem.write(loadbase + mem_start, elfdata_mapping)
+        self.images.append(Image(loadbase + mem_start + 0x40, loadbase + 0x145c, os.path.abspath(self.path)))
 
         init_module = self.lkm_get_init(elffile) + loadbase + mem_start
         self.ql.log.debug(f'init_module : {init_module:#x}')
